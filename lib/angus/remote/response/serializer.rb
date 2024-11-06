@@ -10,12 +10,12 @@ module Angus
 
         def self.serialize(response)
           h = {}
-          h['status_code'] = response[:status_code]
-          h['body'] = response[:body]
-          h['service_code_name'] = response[:service_code_name]
-          h['service_version'] = response[:service_version]
-          h['operation_namespace'] = response[:operation_namespace]
-          h['operation_code_name'] = response[:operation_code_name]
+          h['status_code'] = response.http_response_info[:status_code]
+          h['body'] = response.http_response_info[:body]
+          h['service_code_name'] = response.http_response_info[:service_code_name]
+          h['service_version'] = response.http_response_info[:service_version]
+          h['operation_namespace'] = response.http_response_info[:operation_namespace]
+          h['operation_code_name'] = response.http_response_info[:operation_code_name]
 
           h['body'].force_encoding('UTF-8')
 

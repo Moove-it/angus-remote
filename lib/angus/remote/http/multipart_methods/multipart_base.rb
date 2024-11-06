@@ -12,8 +12,8 @@ module Http
       end
 
       def body=(value)
-        @body_parts = value.map {|(k,v)| Parts::Part.new(boundary, k, v)}
-        @body_parts << Parts::EpiloguePart.new(boundary)
+        @body_parts = value.map {|(k,v)| ::Multipart::Post::Parts::Part.new(boundary, k, v)}
+        @body_parts << ::Multipart::Post::Parts::EpiloguePart.new(boundary)
         set_headers_for_body
       end
 

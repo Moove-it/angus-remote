@@ -275,7 +275,8 @@ module Angus
       private_class_method :set_service_configuration
 
       def self.load_services_configuration_file
-        return {} unless File.exists?(Settings.configuration_file)
+        return {} unless File.exist?(Settings.configuration_file)
+
         configuration = YAML.load_file(Settings.configuration_file)
 
         configuration = {} unless configuration.is_a?(Hash)

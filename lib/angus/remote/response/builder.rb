@@ -56,38 +56,41 @@ module Angus
 
           json_response = JSON(body)
 
-          response_class = build_response_class(operation_definition.name)
+          fields = {}
 
-          response = response_class.new
-
-          # TODO use constants
-          response[:status_code] = status_code
-          response[:body] = body
-          response[:service_code_name] = service_code_name
-          response[:service_version] = service_version
-          response[:operation_namespace] = operation_namespace
-          response[:operation_code_name] = operation_code_name
-
-          response.status = json_response['status']
-          response.messages = self.build_messages(json_response['messages'])
+          fields[:status] = json_response['status']
+          fields[:messages] = self.build_messages(json_response['messages'])
 
           representations_hash = self.representations_hash(representations)
           glossary_terms_hash = glossary.terms_hash
 
           operation_definition.response_elements.each do |element|
-            self.build_response_method(json_response, response_class, response,
-                                       representations_hash, glossary_terms_hash, element)
+            element_value = self.build_response_method(json_response, representations_hash, glossary_terms_hash, element)
+
+            fields[element.name.to_sym] = element_value
           end
+
+          response_class = Angus::Remote::RemoteResponse.new(*fields.keys, :elements)
+          response = response_class.new(*fields.values, fields.transform_keys(&:to_s))
+
+          response.http_response_info[:status_code] = status_code
+          response.http_response_info[:body] = body
+          response.http_response_info[:service_code_name] = service_code_name
+          response.http_response_info[:service_version] = service_version
+          response.http_response_info[:operation_namespace] = operation_namespace
+          response.http_response_info[:operation_code_name] = operation_code_name
+
+          fields = nil
+          response_class = nil
 
           response
         end
 
         # Builds the methods for each value / object / array
         #
-        # The r parameter should contain in the body, encoded as json, the values / objects
+        # The response parameter should contain in the body, encoded as json, the values / objects
         # specified in the operation response metadata
-        def self.build_response_method(json_response, response_class, response,
-                                       representations_hash, glossary_terms_hash, element)
+        def self.build_response_method(json_response, representations_hash, glossary_terms_hash, element)
           if (json_response.has_key?(element.name))
             hash_value = json_response[element.name]
           elsif (element.required == false)
@@ -117,15 +120,7 @@ module Angus
             end
           end
 
-          # Don't apply the glossary to response elements
-          response.elements[element.name] = object_value
-
-          # Instead, apply the glossary to method names
-          getter_method_name = self.apply_glossary(element.name, glossary_terms_hash)
-
-          response_class.send :define_method, getter_method_name do
-            object_value
-          end
+          object_value
         end
 
         # Builds a Response based on a service's response
@@ -167,26 +162,6 @@ module Angus
           return name
         end
 
-        # Build a response class for the operation
-        #
-        # @param [String] operation_name the name of the operation
-        #
-        # @return [Class] A class client, that inherits from {Angus::Remote::Response}
-        def self.build_response_class(operation_name)
-          response_class = Class.new(Angus::Remote::RemoteResponse)
-          response_class.class_eval <<-END
-            def self.name
-              "#<Response_#{operation_name.gsub(' ', '_')}>"
-            end
-
-            def self.to_s
-              name
-            end
-          END
-
-          response_class
-        end
-
         # Receives an array of messages and returns an array of Message objects
         def self.build_messages(messages)
           messages ||= []
@@ -206,12 +181,7 @@ module Angus
         def self.build_from_representation(hash_value, type, representations, glossary_terms_hash)
           return nil if hash_value.nil?
 
-          representation_class = Class.new do
-            include Angus::Remote::Response::Hash
-          end
-
-          representation_object = representation_class.new
-
+          fields = {}
           if representations.include?(type)
             representation = representations[type]
             return nil if representation.nil?
@@ -237,16 +207,15 @@ module Angus
                 end
               end
 
-              # Don't apply the glossary to response elements
-              representation_object.elements[field.name] = field_value
-
-              # Instead, apply the glossary to method names
-              getter_method_name = self.apply_glossary(field.name, glossary_terms_hash)
-
-              representation_class.send :define_method, field.name.to_sym do
-                field_value
-              end
+              fields[field.name.to_sym] = field_value
             end
+
+            representation_class = Struct.new(*fields.keys, :elements)
+            representation_object = representation_class.new(*fields.values, fields.transform_keys(&:to_s))
+
+            fields = nil
+            representation_class = nil
+
           else
             if type.to_sym == :variable
               representation_object = self.build_from_variable_fields(hash_value)
@@ -281,24 +250,20 @@ module Angus
 
         # Builds an object from variable fields
         def self.build_from_variable_fields(variable_fields_hash)
-
           return nil if variable_fields_hash.nil?
 
-          representation_class = Class.new do
-            include Angus::Remote::Response::Hash
-          end
-
-          representation_object = representation_class.new
-
+          fields = {}
           variable_fields_hash.each do |key_name, field_value|
-            representation_object.elements[key_name] = field_value
-            representation_class.send :define_method, key_name.to_sym do
-              field_value
-            end
+            fields[key_name.to_sym] = field_value
           end
+
+          representation_class = Struct.new(*fields.keys, :elements)
+          representation_object = representation_class.new(*fields.values, fields.transform_keys(&:to_s))
+
+          fields = nil
+          representation_class = nil
 
           representation_object
-
         end
 
         # Receives an array of representations and returns a hash of representations where
