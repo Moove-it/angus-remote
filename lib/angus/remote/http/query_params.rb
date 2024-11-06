@@ -33,7 +33,7 @@ module Http
       elsif value.is_a?(Hash)
         stack << [key,value]
       else
-        param << "#{key}=#{CGI.escape(value.to_s)}&"
+        param << "#{key}=#{URI.encode_www_form_component(value.to_s)}&"
       end
 
       stack.each do |parent, hash|

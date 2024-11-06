@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+
+KEY_FILE_NAME=id_ed25519
+
+docker build \
+  --build-arg SSH_PRV_KEY="$(cat ~/.ssh/$KEY_FILE_NAME)" \
+  --build-arg SSH_PUB_KEY="$(cat ~/.ssh/$KEY_FILE_NAME.pub)" \
+  --build-arg SSH_KNOWN_HOSTS="$(cat ~/.ssh/known_hosts)" \
+  -t angus-remote .
+
+(docker stop angus-remote) || true
+(docker rm angus-remote) || true
+
+docker run -it --name angus-remote -v ${PWD}:/home/angus-remote angus-remote bash
