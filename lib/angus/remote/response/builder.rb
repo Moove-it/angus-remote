@@ -59,7 +59,13 @@ module Angus
           fields = {}
 
           fields[:status] = json_response['status']
+          fields[:status_code] = status_code
           fields[:messages] = self.build_messages(json_response['messages'])
+          fields[:body] = body
+          fields[:service_code_name] = service_code_name
+          fields[:service_version] = service_version
+          fields[:operation_namespace] = operation_namespace
+          fields[:operation_code_name] = operation_code_name
 
           representations_hash = self.representations_hash(representations)
           glossary_terms_hash = glossary.terms_hash
