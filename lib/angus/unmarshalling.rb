@@ -13,7 +13,7 @@ module Angus
         #scalar.force_encoding(Encoding::UTF_8)
         scalar
       when :integer
-        scalar
+        Integer(scalar)
       when :boolean
         scalar
       when :date
